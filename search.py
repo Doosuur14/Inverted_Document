@@ -1,13 +1,14 @@
 import re
+from nltk.stem import WordNetLemmatizer
 
+lemmatizer = WordNetLemmatizer()
 
+# Load the inverted index
 index = {}
-
 with open("inverted_index.txt", "r", encoding="utf-8") as f:
     for line in f:
-        word, docs = line.strip().split(": ")
-        index[word] = set(docs.split())
-
+        lemma, docs = line.strip().split(": ")
+        index[lemma] = set(docs.split())
 
 all_docs = set()
 for docs in index.values():
@@ -43,15 +44,14 @@ def evaluate(query):
                 stack.append(all_docs - right)
 
             else:
-                stack.append(index.get(token, set()))
+                lemma = lemmatizer.lemmatize(token)  # lemmatize query token
+                stack.append(index.get(lemma, set()))
 
         return stack[0]
 
     return parse(tokens)
 
-
+# Example usage
 query = input("Enter query: ")
-
 result = evaluate(query)
-
 print("Matching documents:", result)
