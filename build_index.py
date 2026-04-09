@@ -1,49 +1,45 @@
 import os
 import re
-from bs4 import BeautifulSoup
-from nltk.stem import WordNetLemmatizer
-import nltk
-import ssl
+import json
+from collections import defaultdict
 
-# Fix SSL issue for NLTK on macOS
-try:
-    _create_unverified_https_context = ssl._create_unverified_context
-except AttributeError:
-    pass
-else:
-    ssl._create_default_https_context = _create_unverified_https_context
 
-# Ensure NLTK data is available
-nltk.download('wordnet')
-nltk.download('omw-1.4')
+def tokenize(text: str):
+    words = re.findall(r"[A-Za-zА-Яа-яЁё]+", text.lower())
+    return words
 
-folder = "text-files"
-index = {}
-lemmatizer = WordNetLemmatizer()
 
-def tokenize(text):
-    return re.findall(r'\b[a-zA-Z]+\b', text.lower())
+def build_inverted_index(folder_path: str):
+    index = defaultdict(set)
 
-for filename in os.listdir(folder):
-    if not filename.endswith(".txt"):
-        continue
+    for filename in os.listdir(folder_path):
+        if filename.endswith(".txt"):
+            filepath = os.path.join(folder_path, filename)
 
-    filepath = os.path.join(folder, filename)
-    with open(filepath, "r", encoding="utf-8") as f:
-        text = f.read()
+            with open(filepath, "r", encoding="utf-8", errors="ignore") as f:
+                text = f.read()
 
-    words = tokenize(text)
+            tokens = tokenize(text)
 
-    for word in words:
-        lemma = lemmatizer.lemmatize(word)
-        if lemma not in index:
-            index[lemma] = set()
-        index[lemma].add(filename)
+            for token in tokens:
+                index[token].add(filename)
 
-# Save the inverted index
-with open("inverted_index.txt", "w", encoding="utf-8") as f:
-    for lemma in sorted(index.keys()):
-        docs = " ".join(sorted(index[lemma]))
-        f.write(f"{lemma}: {docs}\n")
+    # convert sets to sorted lists (JSON compatible)
+    index_json = {term: sorted(list(files)) for term, files in index.items()}
+    return index_json
 
-print("✅ Lemmatized inverted index created!")
+
+def main():
+    input_folder = "text-files"
+    output_file = "inverted_index.json"
+
+    index = build_inverted_index(input_folder)
+
+    with open(output_file, "w", encoding="utf-8") as f:
+        json.dump(index, f, ensure_ascii=False, indent=2)
+
+    print(f"Inverted index saved to {output_file}")
+
+
+if __name__ == "__main__":
+    main()
