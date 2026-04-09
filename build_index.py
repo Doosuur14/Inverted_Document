@@ -1,45 +1,49 @@
 import os
-import re
 import json
+import re
 from collections import defaultdict
 
-
-def tokenize(text: str):
-    words = re.findall(r"[A-Za-zА-Яа-яЁё]+", text.lower())
-    return words
-
-
-def build_inverted_index(folder_path: str):
-    index = defaultdict(set)
-
-    for filename in os.listdir(folder_path):
-        if filename.endswith(".txt"):
-            filepath = os.path.join(folder_path, filename)
-
-            with open(filepath, "r", encoding="utf-8", errors="ignore") as f:
-                text = f.read()
-
-            tokens = tokenize(text)
-
-            for token in tokens:
-                index[token].add(filename)
-
-    # convert sets to sorted lists (JSON compatible)
-    index_json = {term: sorted(list(files)) for term, files in index.items()}
-    return index_json
+# PAGES_DIR = "/Users/doosuur/Tokenization/pages"
+PAGES_DIR = "/Users/doosuur/Tokenization/output"
+INDEX_FILE = "inverted_index2.json"
 
 
-def main():
-    input_folder = "text-files"
-    output_file = "inverted_index.json"
+def tokenize(text):
+    text = text.lower()
+    tokens = re.findall(r"[a-z]+", text)
+    return tokens
 
-    index = build_inverted_index(input_folder)
 
-    with open(output_file, "w", encoding="utf-8") as f:
-        json.dump(index, f, ensure_ascii=False, indent=2)
+def build_index():
+    inverted_index = defaultdict(set)
 
-    print(f"Inverted index saved to {output_file}")
+    files = sorted(os.listdir(PAGES_DIR))
+
+    for file in files:
+        doc_id = file.split(".")[0]
+
+        with open(os.path.join(PAGES_DIR, file), "r", encoding="utf-8") as f:
+            text = f.read()
+
+        tokens = tokenize(text)
+
+        for token in tokens:
+            inverted_index[token].add(doc_id)
+
+   
+    inverted_index = {k: sorted(list(v)) for k, v in inverted_index.items()}
+
+    return inverted_index
+
+
+def save_index(index):
+    with open(INDEX_FILE, "w", encoding="utf-8") as f:
+        json.dump(index, f, indent=2)
 
 
 if __name__ == "__main__":
-    main()
+    index = build_index()
+    save_index(index)
+
+    print("Inverted index created.")
+    print("Total terms:", len(index))
